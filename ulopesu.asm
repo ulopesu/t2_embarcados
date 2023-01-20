@@ -1,3 +1,8 @@
+; Trabalho de Sistemas Embarcados I
+; Usiel Ferreira Lopes Junior
+; 2022/1
+; Turma: 06.1
+
 segment code
 ..start:
     mov 	ax,data

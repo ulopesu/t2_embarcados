@@ -50,15 +50,6 @@ ab:
 	je      config_hrs
 	jmp 	l1			; outras teclas -> loop principal
 
-config_seg:
-	jmp fim
-
-config_min:
-	jmp fim
-
-config_hrs:
-	jmp fim
-
 fim:
 	mov  	AH, 0   					; set video mode
 	mov  	AL, [modo_anterior]   		; modo anterior
@@ -72,6 +63,75 @@ fim:
     MOV     [ES:intr*4], AX
 	mov     AX, 4C00H
 	int     21h
+
+config_seg:
+	call 	apaga_select
+	call 	desenha_select_seg
+	jmp 	l1
+
+config_min:
+	call 	apaga_select
+	call 	desenha_select_min
+	jmp 	l1
+
+config_hrs:
+	call 	apaga_select
+	call	desenha_select_hrs
+	jmp 	l1
+
+apaga_select:
+	mov     	cx, 8					;numero de caracteres
+	mov     	bx, 0
+	mov     	dh, 15					;linha 0-29
+	mov     	dl, 38					;coluna 0-79
+	mov			byte[cor], preto
+	loop_apaga_select:
+		call	cursor
+		mov     al, ' '
+		call	caracter
+		inc     bx			;proximo caracter
+		inc		dl			;avanca a coluna
+		loop    loop_apaga_select
+	ret
+
+desenha_select_seg:
+	mov     dh, 15						;linha 0-29
+	mov     dl, 45						;coluna 0-79
+	mov		byte[cor], verde_claro
+	call	cursor
+	mov     al, 35
+	call	caracter
+	mov     dl, 44						;coluna 0-79
+	call	cursor
+	mov     al, 35
+	call	caracter
+	ret
+
+desenha_select_min:
+	mov     dh, 15						;linha 0-29
+	mov     dl, 42						;coluna 0-79
+	mov		byte[cor], verde_claro
+	call	cursor
+	mov     al, 35
+	call	caracter
+	mov     dl, 41						;coluna 0-79
+	call	cursor
+	mov     al, 35
+	call	caracter
+	ret
+
+desenha_select_hrs:
+	mov     dh, 15						;linha 0-29
+	mov     dl, 39						;coluna 0-79
+	mov		byte[cor], verde_claro
+	call	cursor
+	mov     al, 35
+	call	caracter
+	mov     dl, 38						;coluna 0-79
+	call	cursor
+	mov     al, 35
+	call	caracter
+	ret
 
 relogio:
 	push	ax
@@ -335,13 +395,15 @@ caracter:
 
 
 segment data
-	; COFIGURAÇÃO PARA STRING GENERICA
+	; CONFIGURAÇÃO PARA ALTERAR HORÁRIO
+	select_smh		db		0		; 	0->nenhum, 1->segundos, 2->minutos, 3->horas
+	; CONFIGURAÇÃO PARA STRING GENERICA
 	num_chars		dw		0
 	linha_str		db		0
 	coluna_str		db		0
 	main_str		times 	500		db	0
 
-	; COFIGURAÇÃO DE CORES
+	; CONFIGURAÇÃO DE CORES
 	cor		db		branco_intenso	;	I R G B COR
 	preto			equ		0		;	0 0 0 0 preto
 	azul			equ		1		;	0 0 0 1 azul

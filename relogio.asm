@@ -29,11 +29,12 @@ segment code
 	call 	textos_fixos
 
 l1:
+	call  	ajustar_horas
 	cmp 	byte [tique], 0
-	jne 	ab
+	jne 	ler_teclado
 	call 	converte
 
-ab: 
+ler_teclado:
 	mov 	ah,0bh		
     int 	21h			; Le buffer de teclado
     cmp 	al,0
@@ -50,6 +51,27 @@ ab:
 	je      config_hrs
 	jmp 	l1			; outras teclas -> loop principal
 
+limpa_seg:
+	mov byte [segundo], 0
+	jmp ajustar_horas
+
+limpa_min:
+	mov byte [minuto], 0
+	jmp ajustar_horas
+
+limpa_hrs:
+	mov byte [hora], 0
+	jmp ajustar_horas
+
+ajustar_horas:
+	cmp byte [segundo], 60
+	jnl	limpa_seg
+	cmp byte [minuto], 60
+	jnl	limpa_min
+	cmp byte [hora], 24
+	jnl	limpa_hrs
+	ret
+
 fim:
 	mov  	AH, 0   					; set video mode
 	mov  	AL, [modo_anterior]   		; modo anterior
@@ -65,25 +87,110 @@ fim:
 	int     21h
 
 config_seg:
-	call 	apaga_select
 	call 	desenha_select_seg
+	call 	ler_nums
+	call 	w_seg
+	call 	apaga_select
 	jmp 	l1
 
 config_min:
-	call 	apaga_select
 	call 	desenha_select_min
+	call 	ler_nums
+	call 	w_min
+	call 	apaga_select
 	jmp 	l1
 
 config_hrs:
-	call 	apaga_select
 	call	desenha_select_hrs
+	call 	ler_nums
+	call 	w_hora
+	call 	apaga_select
 	jmp 	l1
+
+ler_nums:		; 	Lê dois números
+	xor cx, cx
+	loop_ler_nums
+		mov 	ah,0bh		
+		int 	21h			; Le buffer de teclado
+		cmp 	al, 0
+		je		loop_ler_nums			; nenhuma telha -> loop principal
+		call 	verificar_tecla
+		cmp cx, 2
+		jne loop_ler_nums
+	ret
+
+w_n1:
+	mov byte[n1], dl
+	ret
+
+w_n2:
+	mov byte[n2], dl
+	ret
+
+ler_num:
+	inc cx
+	mov dl, al
+	sub dl, 30h
+	cmp cx, 1
+	je 	w_n1
+	cmp cx, 2
+	je 	w_n2
+	ret
+
+verificar_tecla:
+	mov 	ah, 08
+	int 	21h
+	cmp		al, '0'
+	je		ler_num
+	cmp		al, '1'
+	je		ler_num
+	cmp		al, '2'
+	je		ler_num
+	cmp		al, '3'
+	je		ler_num
+	cmp		al, '4'
+	je		ler_num
+	cmp		al, '5'
+	je		ler_num
+	cmp		al, '6'
+	je		ler_num
+	cmp		al, '7'
+	je		ler_num
+	cmp		al, '8'
+	je		ler_num
+	cmp		al, '9'
+	je		ler_num
+	ret
+
+pega_num:
+	xor ax, ax
+	mov al, byte[n1]
+	mov cx, 10
+	mul cx
+	add al, byte[n2]
+	ret
+
+w_hora:
+	call 	pega_num
+	mov 	byte[hora], al
+	ret
+
+w_min:
+	call 	pega_num
+	mov 	byte[minuto], al
+	ret
+
+w_seg:
+	call 	pega_num
+	dec 	al
+	mov 	byte[segundo], al
+	ret
 
 apaga_select:
 	mov     	cx, 8					;numero de caracteres
 	mov     	bx, 0
 	mov     	dh, 15					;linha 0-29
-	mov     	dl, 38					;coluna 0-79
+	mov     	dl, 39					;coluna 0-79
 	mov			byte[cor], preto
 	loop_apaga_select:
 		call	cursor
@@ -96,12 +203,12 @@ apaga_select:
 
 desenha_select_seg:
 	mov     dh, 15						;linha 0-29
-	mov     dl, 45						;coluna 0-79
+	mov     dl, 46						;coluna 0-79
 	mov		byte[cor], verde_claro
 	call	cursor
 	mov     al, 35
 	call	caracter
-	mov     dl, 44						;coluna 0-79
+	mov     dl, 45						;coluna 0-79
 	call	cursor
 	mov     al, 35
 	call	caracter
@@ -109,12 +216,12 @@ desenha_select_seg:
 
 desenha_select_min:
 	mov     dh, 15						;linha 0-29
-	mov     dl, 42						;coluna 0-79
+	mov     dl, 43						;coluna 0-79
 	mov		byte[cor], verde_claro
 	call	cursor
 	mov     al, 35
 	call	caracter
-	mov     dl, 41						;coluna 0-79
+	mov     dl, 42						;coluna 0-79
 	call	cursor
 	mov     al, 35
 	call	caracter
@@ -122,12 +229,12 @@ desenha_select_min:
 
 desenha_select_hrs:
 	mov     dh, 15						;linha 0-29
-	mov     dl, 39						;coluna 0-79
+	mov     dl, 40						;coluna 0-79
 	mov		byte[cor], verde_claro
 	call	cursor
 	mov     al, 35
 	call	caracter
-	mov     dl, 38						;coluna 0-79
+	mov     dl, 39						;coluna 0-79
 	call	cursor
 	mov     al, 35
 	call	caracter
@@ -212,7 +319,7 @@ textos_fixos:
 escreve_horario:
 	mov word[num_chars], 8
 	mov byte[linha_str], 14
-	mov byte[coluna_str], 38
+	mov byte[coluna_str], 39
 	xor bx, bx
 	loop_cp_horario:
 		mov al, byte[horario + bx]
@@ -397,6 +504,8 @@ caracter:
 segment data
 	; CONFIGURAÇÃO PARA ALTERAR HORÁRIO
 	select_smh		db		0		; 	0->nenhum, 1->segundos, 2->minutos, 3->horas
+	n1				db		0
+	n2				db		0
 	; CONFIGURAÇÃO PARA STRING GENERICA
 	num_chars		dw		0
 	linha_str		db		0

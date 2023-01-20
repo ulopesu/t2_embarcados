@@ -9,7 +9,7 @@
      9                                  	; salvar modo atual de video
     10 0000000D B40F                    	mov  		ah,0Fh
     11 0000000F CD10                    	int  		10h
-    12 00000011 A2[0100]                	mov  		[modo_anterior],al   
+    12 00000011 A2[F901]                	mov  		[modo_anterior],al   
     13                                  
     14                                  	; alterar modo de video para gráfico 640x480 16 cores
     15 00000014 B012                    	mov     	al,12h
@@ -19,225 +19,387 @@
     19 0000001A 31C0                    	XOR 	AX, AX
     20 0000001C 8EC0                        MOV 	ES, AX
     21 0000001E 26A12000                    MOV     AX, [ES:intr*4];carregou AX com offset anterior
-    22 00000022 A3[0300]                    MOV     [offset_dos], AX        ; offset_dos guarda o end. para qual ip de int 9 estava apontando anteriormente
+    22 00000022 A3[FB01]                    MOV     [offset_dos], AX        ; offset_dos guarda o end. para qual ip de int 9 estava apontando anteriormente
     23 00000025 26A12200                    MOV     AX, [ES:intr*4+2]     ; cs_dos guarda o end. anterior de CS
-    24 00000029 A3[0500]                    MOV     [cs_dos], AX
+    24 00000029 A3[FD01]                    MOV     [cs_dos], AX
     25 0000002C FA                          CLI     
     26 0000002D 268C0E2200                  MOV     [ES:intr*4+2], CS
-    27 00000032 26C7062000[8B00]            MOV     WORD [ES:intr*4],relogio
+    27 00000032 26C7062000[8E00]            MOV     WORD [ES:intr*4],relogio
     28 00000039 FB                          STI
-    29                                  
-    30                                  l1:
-    31 0000003A 803E[0700]00            	cmp 	byte [tique], 0
-    32 0000003F 7503                    	jne 	ab
-    33 00000041 E89500                  	call 	converte
-    34                                  
-    35                                  ab: 
-    36 00000044 B40B                    	mov 	ah,0bh		
-    37 00000046 CD21                        int 	21h			; Le buffer de teclado
-    38 00000048 3C00                        cmp 	al,0
-    39 0000004A 74EE                    	je		l1			; nenhuma telha -> loop principal
-    40 0000004C B408                    	mov 	ah, 08
-    41 0000004E CD21                    	int 	21h
-    42 00000050 3C78                    	cmp		al, 'x'		; tecla x -> finaliza o programa
-    43 00000052 7418                    	je      fim
-    44 00000054 3C73                    	cmp		al, 's'		; tecla s -> configura os segundos
-    45 00000056 740B                    	je      config_seg
-    46 00000058 3C6D                    	cmp		al, 'm'		; tecla m -> configura os minutos
-    47 0000005A 740A                    	je      config_min
-    48 0000005C 3C68                    	cmp		al, 'h'		; tecla h -> configura as horas
-    49 0000005E 7409                    	je      config_hrs
-    50 00000060 E9D7FF                  	jmp 	l1			; outras teclas -> loop principal
-    51                                  
-    52                                  config_seg:
-    53 00000063 E90600                  	jmp fim
-    54                                  
-    55                                  config_min:
-    56 00000066 E90300                  	jmp fim
-    57                                  
-    58                                  config_hrs:
-    59 00000069 E90000                  	jmp fim
-    60                                  
-    61                                  fim:
-    62 0000006C B400                    	mov  	AH, 0   					; set video mode
-    63 0000006E A0[0100]                	mov  	AL, [modo_anterior]   		; modo anterior
-    64 00000071 CD10                    	int  	10h
-    65 00000073 FA                      	CLI
-    66 00000074 31C0                        XOR     AX, AX
-    67 00000076 8EC0                        MOV     ES, AX
-    68 00000078 A1[0500]                    MOV     AX, [cs_dos]
-    69 0000007B 26A32200                    MOV     [ES:intr*4+2], AX
-    70 0000007F A1[0300]                    MOV     AX, [offset_dos]
-    71 00000082 26A32000                    MOV     [ES:intr*4], AX
-    72 00000086 B8004C                  	mov     AX, 4C00H
-    73 00000089 CD21                    	int     21h
-    74                                  
-    75                                  relogio:
-    76 0000008B 50                      	push	ax
-    77 0000008C 1E                      	push	ds
-    78 0000008D B8[0000]                	mov     ax,data	
-    79 00000090 8ED8                    	mov     ds,ax	
-    80                                      
-    81 00000092 FE06[0700]                  inc	byte [tique]
-    82 00000096 803E[0700]12                cmp	byte[tique], 18	
-    83 0000009B 7235                        jb		Fimrel
-    84 0000009D C606[0700]00            	mov byte [tique], 0
-    85 000000A2 FE06[0800]              	inc byte [segundo]
-    86 000000A6 803E[0800]3C            	cmp byte [segundo], 60
-    87 000000AB 7225                    	jb   	Fimrel
-    88 000000AD C606[0800]00            	mov byte [segundo], 0
-    89 000000B2 FE06[0900]              	inc byte [minuto]
-    90 000000B6 803E[0900]3C            	cmp byte [minuto], 60
-    91 000000BB 7215                    	jb   	Fimrel
-    92 000000BD C606[0900]00            	mov byte [minuto], 0
-    93 000000C2 FE06[0A00]              	inc byte [hora]
-    94 000000C6 803E[0A00]18            	cmp byte [hora], 24
-    95 000000CB 7205                    	jb   	Fimrel
-    96 000000CD C606[0A00]00            	mov byte [hora], 0	
-    97                                  Fimrel:
-    98 000000D2 B020                        mov		al,20h
-    99 000000D4 E620                    	out		20h,al
-   100 000000D6 1F                      	pop		ds
-   101 000000D7 58                      	pop		ax
-   102 000000D8 CF                      	iret
-   103                                  	
-   104                                  converte:
-   105 000000D9 50                          push 	ax
-   106 000000DA 1E                      	push    ds
-   107 000000DB B8[0000]                	mov     ax, data
-   108 000000DE 8ED8                    	mov     ds, ax
-   109 000000E0 30E4                    	xor 	ah, ah
-   110 000000E2 B30A                    	MOV     BL, 10
-   111 000000E4 A0[0800]                	mov 	al, byte [segundo]
-   112 000000E7 F6F3                        DIV     BL
-   113 000000E9 0430                        ADD     AL, 30h                                                                                          
-   114 000000EB A2[1100]                    MOV     byte [horario+6], AL
-   115 000000EE 80C430                      ADD     AH, 30h
-   116 000000F1 8826[1200]                  mov 	byte [horario+7], AH
-   117                                      
-   118 000000F5 30E4                    	xor 	ah, ah
-   119 000000F7 A0[0900]                	mov 	al, byte [minuto]
-   120 000000FA F6F3                        DIV     BL
-   121 000000FC 0430                        ADD     AL, 30h                                                                                          
-   122 000000FE A2[0E00]                    MOV     byte [horario+3], AL
-   123 00000101 80C430                      ADD     AH, 30h
-   124 00000104 8826[0F00]                  mov 	byte [horario+4], AH
-   125                                  	
-   126 00000108 30E4                    	xor 	ah, ah
-   127 0000010A A0[0A00]                	mov 	al, byte [hora]
-   128 0000010D F6F3                        DIV     BL
-   129 0000010F 0430                        ADD     AL, 30h                                                                                          
-   130 00000111 A2[0B00]                    MOV     byte [horario], AL
-   131 00000114 80C430                      ADD     AH, 30h
-   132 00000117 8826[0C00]                  mov 	byte [horario+1], AH
-   133                                  
-   134                                  	; ESCRECVE HORARIO (00:00:00)
-   135 0000011B B90800                  	mov     	cx,8			;numero de caracteres
-   136 0000011E BB0000                  	mov     	bx,0
-   137 00000121 B60E                    	mov     	dh,14			;linha 0-29
-   138 00000123 B223                    	mov     	dl,35			;coluna 0-79
-   139 00000125 C606[0000]02            	mov			byte[cor], verde
-   140                                  	l_w_horario:
-   141 0000012A E80F00                  		call	cursor
-   142 0000012D 8A87[0B00]              		mov     al,[bx+horario]
-   143 00000131 E81F00                  		call	caracter
-   144 00000134 43                      		inc     bx			;proximo caracter
-   145 00000135 FEC2                    		inc		dl			;avanca a coluna
-   146 00000137 E2F1                    		loop    l_w_horario
-   147                                  
-   148 00000139 1F                      	pop     ds
-   149 0000013A 58                      	pop     ax
-   150 0000013B C3                      	ret  
+    29 0000003A E8E700                  	call 	textos_fixos
+    30                                  
+    31                                  l1:
+    32 0000003D 803E[FF01]00            	cmp 	byte [tique], 0
+    33 00000042 7503                    	jne 	ab
+    34 00000044 E89500                  	call 	converte
+    35                                  
+    36                                  ab: 
+    37 00000047 B40B                    	mov 	ah,0bh		
+    38 00000049 CD21                        int 	21h			; Le buffer de teclado
+    39 0000004B 3C00                        cmp 	al,0
+    40 0000004D 74EE                    	je		l1			; nenhuma telha -> loop principal
+    41 0000004F B408                    	mov 	ah, 08
+    42 00000051 CD21                    	int 	21h
+    43 00000053 3C78                    	cmp		al, 'x'		; tecla x -> finaliza o programa
+    44 00000055 7418                    	je      fim
+    45 00000057 3C73                    	cmp		al, 's'		; tecla s -> configura os segundos
+    46 00000059 740B                    	je      config_seg
+    47 0000005B 3C6D                    	cmp		al, 'm'		; tecla m -> configura os minutos
+    48 0000005D 740A                    	je      config_min
+    49 0000005F 3C68                    	cmp		al, 'h'		; tecla h -> configura as horas
+    50 00000061 7409                    	je      config_hrs
+    51 00000063 E9D7FF                  	jmp 	l1			; outras teclas -> loop principal
+    52                                  
+    53                                  config_seg:
+    54 00000066 E90600                  	jmp fim
+    55                                  
+    56                                  config_min:
+    57 00000069 E90300                  	jmp fim
+    58                                  
+    59                                  config_hrs:
+    60 0000006C E90000                  	jmp fim
+    61                                  
+    62                                  fim:
+    63 0000006F B400                    	mov  	AH, 0   					; set video mode
+    64 00000071 A0[F901]                	mov  	AL, [modo_anterior]   		; modo anterior
+    65 00000074 CD10                    	int  	10h
+    66 00000076 FA                      	CLI
+    67 00000077 31C0                        XOR     AX, AX
+    68 00000079 8EC0                        MOV     ES, AX
+    69 0000007B A1[FD01]                    MOV     AX, [cs_dos]
+    70 0000007E 26A32200                    MOV     [ES:intr*4+2], AX
+    71 00000082 A1[FB01]                    MOV     AX, [offset_dos]
+    72 00000085 26A32000                    MOV     [ES:intr*4], AX
+    73 00000089 B8004C                  	mov     AX, 4C00H
+    74 0000008C CD21                    	int     21h
+    75                                  
+    76                                  relogio:
+    77 0000008E 50                      	push	ax
+    78 0000008F 1E                      	push	ds
+    79 00000090 B8[0000]                	mov     ax,data	
+    80 00000093 8ED8                    	mov     ds,ax	
+    81                                      
+    82 00000095 FE06[FF01]                  inc	byte [tique]
+    83 00000099 803E[FF01]12                cmp	byte[tique], 18	
+    84 0000009E 7235                        jb		Fimrel
+    85 000000A0 C606[FF01]00            	mov byte [tique], 0
+    86 000000A5 FE06[0002]              	inc byte [segundo]
+    87 000000A9 803E[0002]3C            	cmp byte [segundo], 60
+    88 000000AE 7225                    	jb   	Fimrel
+    89 000000B0 C606[0002]00            	mov byte [segundo], 0
+    90 000000B5 FE06[0102]              	inc byte [minuto]
+    91 000000B9 803E[0102]3C            	cmp byte [minuto], 60
+    92 000000BE 7215                    	jb   	Fimrel
+    93 000000C0 C606[0102]00            	mov byte [minuto], 0
+    94 000000C5 FE06[0202]              	inc byte [hora]
+    95 000000C9 803E[0202]18            	cmp byte [hora], 24
+    96 000000CE 7205                    	jb   	Fimrel
+    97 000000D0 C606[0202]00            	mov byte [hora], 0	
+    98                                  Fimrel:
+    99 000000D5 B020                        mov		al,20h
+   100 000000D7 E620                    	out		20h,al
+   101 000000D9 1F                      	pop		ds
+   102 000000DA 58                      	pop		ax
+   103 000000DB CF                      	iret
+   104                                  	
+   105                                  converte:
+   106 000000DC 50                          push 	ax
+   107 000000DD 1E                      	push    ds
+   108 000000DE B8[0000]                	mov     ax, data
+   109 000000E1 8ED8                    	mov     ds, ax
+   110 000000E3 30E4                    	xor 	ah, ah
+   111 000000E5 B30A                    	MOV     BL, 10
+   112 000000E7 A0[0002]                	mov 	al, byte [segundo]
+   113 000000EA F6F3                        DIV     BL
+   114 000000EC 0430                        ADD     AL, 30h                                                                                          
+   115 000000EE A2[0E02]                    MOV     byte [horario+6], AL
+   116 000000F1 80C430                      ADD     AH, 30h
+   117 000000F4 8826[0F02]                  mov 	byte [horario+7], AH
+   118                                      
+   119 000000F8 30E4                    	xor 	ah, ah
+   120 000000FA A0[0102]                	mov 	al, byte [minuto]
+   121 000000FD F6F3                        DIV     BL
+   122 000000FF 0430                        ADD     AL, 30h                                                                                          
+   123 00000101 A2[0B02]                    MOV     byte [horario+3], AL
+   124 00000104 80C430                      ADD     AH, 30h
+   125 00000107 8826[0C02]                  mov 	byte [horario+4], AH
+   126                                  	
+   127 0000010B 30E4                    	xor 	ah, ah
+   128 0000010D A0[0202]                	mov 	al, byte [hora]
+   129 00000110 F6F3                        DIV     BL
+   130 00000112 0430                        ADD     AL, 30h                                                                                          
+   131 00000114 A2[0802]                    MOV     byte [horario], AL
+   132 00000117 80C430                      ADD     AH, 30h
+   133 0000011A 8826[0902]                  mov 	byte [horario+1], AH
+   134                                  
+   135                                  	; ESCREVE HORARIO (00:00:00)
+   136 0000011E E81900                  	call escreve_horario
+   137                                  
+   138 00000121 1F                      	pop     ds
+   139 00000122 58                      	pop     ax
+   140 00000123 C3                      	ret  
+   141                                  
+   142                                  textos_fixos:
+   143 00000124 E83800                  	call escreve_textohora
+   144 00000127 E85A00                  	call escreve_alunoturma
+   145 0000012A E87C00                  	call escreve_titulomenu
+   146 0000012D E89E00                  	call escreve_textox
+   147 00000130 E8C000                  	call escreve_textoseg
+   148 00000133 E8E200                  	call escreve_textomin
+   149 00000136 E80401                  	call escreve_textohrs
+   150 00000139 C3                      	ret
    151                                  
-   152                                  ;***************************************************************************
-   153                                  ;
-   154                                  ;   funcao cursor
-   155                                  ;
-   156                                  ; dh = linha (0-29) e  dl=coluna  (0-79)
-   157                                  cursor:
-   158 0000013C 9C                      		pushf
-   159 0000013D 50                      		push 		ax
-   160 0000013E 53                      		push 		bx
-   161 0000013F 51                      		push		cx
-   162 00000140 52                      		push		dx
-   163 00000141 56                      		push		si
-   164 00000142 57                      		push		di
-   165 00000143 55                      		push		bp
-   166 00000144 B402                    		mov     	ah,2
-   167 00000146 B700                    		mov     	bh,0
-   168 00000148 CD10                    		int     	10h
-   169 0000014A 5D                      		pop		bp
-   170 0000014B 5F                      		pop		di
-   171 0000014C 5E                      		pop		si
-   172 0000014D 5A                      		pop		dx
-   173 0000014E 59                      		pop		cx
-   174 0000014F 5B                      		pop		bx
-   175 00000150 58                      		pop		ax
-   176 00000151 9D                      		popf
-   177 00000152 C3                      		ret
-   178                                  ;_____________________________________________________________________________
-   179                                  ;
-   180                                  ;   fun��o caracter escrito na posi��o do cursor
-   181                                  ;
-   182                                  ; al= caracter a ser escrito
-   183                                  ; cor definida na variavel cor
-   184                                  caracter:
-   185 00000153 9C                      		pushf
-   186 00000154 50                      		push 		ax
-   187 00000155 53                      		push 		bx
-   188 00000156 51                      		push		cx
-   189 00000157 52                      		push		dx
-   190 00000158 56                      		push		si
-   191 00000159 57                      		push		di
-   192 0000015A 55                      		push		bp
-   193 0000015B B409                        	mov     	ah,9
-   194 0000015D B700                        	mov     	bh,0
-   195 0000015F B90100                      	mov     	cx,1
-   196 00000162 8A1E[0000]                 		mov     	bl,[cor]
-   197 00000166 CD10                        	int     	10h
-   198 00000168 5D                      		pop		bp
-   199 00000169 5F                      		pop		di
-   200 0000016A 5E                      		pop		si
-   201 0000016B 5A                      		pop		dx
-   202 0000016C 59                      		pop		cx
-   203 0000016D 5B                      		pop		bx
-   204 0000016E 58                      		pop		ax
-   205 0000016F 9D                      		popf
-   206 00000170 C3                      		ret
-   207                                  ;_____________________________________________________________________________
-   208                                  
-   209                                  
-   210                                  segment data
-   211 00000000 0F                      	cor		db		branco_intenso	;	I R G B COR
-   212                                  	preto			equ		0		;	0 0 0 0 preto
-   213                                  	azul			equ		1		;	0 0 0 1 azul
-   214                                  	verde			equ		2		;	0 0 1 0 verde
-   215                                  	cyan			equ		3		;	0 0 1 1 cyan
-   216                                  	vermelho		equ		4		;	0 1 0 0 vermelho
-   217                                  	magenta			equ		5		;	0 1 0 1 magenta
-   218                                  	marrom			equ		6		;	0 1 1 0 marrom
-   219                                  	branco			equ		7		;	0 1 1 1 branco
-   220                                  	cinza			equ		8		;	1 0 0 0 cinza
-   221                                  	azul_claro		equ		9		;	1 0 0 1 azul claro
-   222                                  	verde_claro		equ		10		;	1 0 1 0 verde claro
-   223                                  	cyan_claro		equ		11		;	1 0 1 1 cyan claro
-   224                                  	rosa			equ		12		;	1 1 0 0 rosa
-   225                                  	magenta_claro	equ		13		;	1 1 0 1 magenta claro
-   226                                  	amarelo			equ		14		;	1 1 1 0 amarelo
-   227                                  	branco_intenso	equ		15		;	1 1 1 1 branco intenso
-   228                                  
-   229                                  	eoi     		EQU 	20h
-   230                                      intr	   		EQU 	08h
-   231 00000001 00                      	modo_anterior	db		0
-   232 00000002 00                      	char			db		0
-   233 00000003 0000                    	offset_dos		dw		0
-   234 00000005 0000                    	cs_dos			dw		0
-   235 00000007 00                      	tique			db  	0
-   236 00000008 00                      	segundo			db  	0
-   237 00000009 00                      	minuto 			db  	0
-   238 0000000A 00                      	hora 			db  	0
-   239 0000000B 00003A00003A000020-     	horario			db  	0,0,':',0,0,':',0,0,' ', 13,'$'
-   240 00000014 0D24               
-   241                                  segment stack stack
-   242 00000000 <res 00000100>              resb 256
-   243                                  stacktop:
+   152                                  escreve_horario:
+   153 0000013A C706[0000]0800          	mov word[num_chars], 8
+   154 00000140 C606[0200]0E            	mov byte[linha_str], 14
+   155 00000145 C606[0300]26            	mov byte[coluna_str], 38
+   156 0000014A 31DB                    	xor bx, bx
+   157                                  	loop_cp_horario:
+   158 0000014C 8A87[0802]              		mov al, byte[horario + bx]
+   159 00000150 8887[0400]              		mov byte[main_str + bx], al
+   160 00000154 43                      		inc bx
+   161 00000155 3B1E[0000]              		cmp bx, word[num_chars]
+   162 00000159 7CF1                    		jl loop_cp_horario
+   163 0000015B E80401                  	call escreve_str
+   164 0000015E C3                      	ret
+   165                                  
+   166                                  escreve_textohora:
+   167 0000015F C706[0000]0500          	mov word[num_chars], 5
+   168 00000165 C606[0200]0E            	mov byte[linha_str], 14
+   169 0000016A C606[0300]21            	mov byte[coluna_str], 33
+   170 0000016F 31DB                    	xor bx, bx
+   171                                  	loop_cp_textohora:
+   172 00000171 8A87[0302]              		mov al, byte[texto_hora + bx]
+   173 00000175 8887[0400]              		mov byte[main_str + bx], al
+   174 00000179 43                      		inc bx
+   175 0000017A 3B1E[0000]              		cmp bx, word[num_chars]
+   176 0000017E 7CF1                    		jl loop_cp_textohora
+   177 00000180 E8DF00                  	call escreve_str
+   178 00000183 C3                      	ret
+   179                                  
+   180                                  escreve_alunoturma:
+   181 00000184 C706[0000]3400          	mov word[num_chars], 52
+   182 0000018A C606[0200]02            	mov byte[linha_str], 2
+   183 0000018F C606[0300]0D            	mov byte[coluna_str], 13
+   184 00000194 31DB                    	xor bx, bx
+   185                                  	loop_cp_alunoturma:
+   186 00000196 8A87[1302]              		mov al, byte[aluno_turma + bx]
+   187 0000019A 8887[0400]              		mov byte[main_str + bx], al
+   188 0000019E 43                      		inc bx
+   189 0000019F 3B1E[0000]              		cmp bx, word[num_chars]
+   190 000001A3 7CF1                    		jl loop_cp_alunoturma
+   191 000001A5 E8BA00                  	call escreve_str
+   192 000001A8 C3                      	ret
+   193                                  
+   194                                  escreve_titulomenu:
+   195 000001A9 C706[0000]0F00          	mov word[num_chars], 15
+   196 000001AF C606[0200]16            	mov byte[linha_str], 22
+   197 000001B4 C606[0300]20            	mov byte[coluna_str], 32
+   198 000001B9 31DB                    	xor bx, bx
+   199                                  	loop_cp_titulomenu:
+   200 000001BB 8A87[4702]              		mov al, byte[titulo_menu + bx]
+   201 000001BF 8887[0400]              		mov byte[main_str + bx], al
+   202 000001C3 43                      		inc bx
+   203 000001C4 3B1E[0000]              		cmp bx, word[num_chars]
+   204 000001C8 7CF1                    		jl loop_cp_titulomenu
+   205 000001CA E89500                  	call escreve_str
+   206 000001CD C3                      	ret
+   207                                  
+   208                                  escreve_textox:
+   209 000001CE C706[0000]0700          	mov word[num_chars], 7
+   210 000001D4 C606[0200]18            	mov byte[linha_str], 24
+   211 000001D9 C606[0300]11            	mov byte[coluna_str], 17
+   212 000001DE 31DB                    	xor bx, bx
+   213                                  	loop_cp_textox:
+   214 000001E0 8A87[5602]              		mov al, byte[texto_x + bx]
+   215 000001E4 8887[0400]              		mov byte[main_str + bx], al
+   216 000001E8 43                      		inc bx
+   217 000001E9 3B1E[0000]              		cmp bx, word[num_chars]
+   218 000001ED 7CF1                    		jl loop_cp_textox
+   219 000001EF E87000                  	call escreve_str
+   220 000001F2 C3                      	ret
+   221                                  
+   222                                  escreve_textoseg:
+   223 000001F3 C706[0000]3500          	mov word[num_chars], 53
+   224 000001F9 C606[0200]19            	mov byte[linha_str], 25
+   225 000001FE C606[0300]11            	mov byte[coluna_str], 17
+   226 00000203 31DB                    	xor bx, bx
+   227                                  	loop_cp_textoseg:
+   228 00000205 8A87[5D02]              		mov al, byte[texto_s + bx]
+   229 00000209 8887[0400]              		mov byte[main_str + bx], al
+   230 0000020D 43                      		inc bx
+   231 0000020E 3B1E[0000]              		cmp bx, word[num_chars]
+   232 00000212 7CF1                    		jl loop_cp_textoseg
+   233 00000214 E84B00                  	call escreve_str
+   234 00000217 C3                      	ret
+   235                                  
+   236                                  escreve_textomin:
+   237 00000218 C706[0000]3400          	mov word[num_chars], 52
+   238 0000021E C606[0200]1A            	mov byte[linha_str], 26
+   239 00000223 C606[0300]11            	mov byte[coluna_str], 17
+   240 00000228 31DB                    	xor bx, bx
+   241                                  	loop_cp_textomin:
+   242 0000022A 8A87[9202]              		mov al, byte[texto_m + bx]
+   243 0000022E 8887[0400]              		mov byte[main_str + bx], al
+   244 00000232 43                      		inc bx
+   245 00000233 3B1E[0000]              		cmp bx, word[num_chars]
+   246 00000237 7CF1                    		jl loop_cp_textomin
+   247 00000239 E82600                  	call escreve_str
+   248 0000023C C3                      	ret
+   249                                  
+   250                                  escreve_textohrs:
+   251 0000023D C706[0000]3200          	mov word[num_chars], 50
+   252 00000243 C606[0200]1B            	mov byte[linha_str], 27
+   253 00000248 C606[0300]11            	mov byte[coluna_str], 17
+   254 0000024D 31DB                    	xor bx, bx
+   255                                  	loop_cp_textohrs:
+   256 0000024F 8A87[C602]              		mov al, byte[texto_h + bx]
+   257 00000253 8887[0400]              		mov byte[main_str + bx], al
+   258 00000257 43                      		inc bx
+   259 00000258 3B1E[0000]              		cmp bx, word[num_chars]
+   260 0000025C 7CF1                    		jl loop_cp_textohrs
+   261 0000025E E80100                  	call escreve_str
+   262 00000261 C3                      	ret
+   263                                  
+   264                                  escreve_str:
+   265 00000262 8B0E[0000]              	mov     	cx, word[num_chars]						;numero de caracteres
+   266 00000266 BB0000                  	mov     	bx, 0
+   267 00000269 8A36[0200]              	mov     	dh, byte[linha_str]						;linha 0-29
+   268 0000026D 8A16[0300]              	mov     	dl, byte[coluna_str]					;coluna 0-79
+   269 00000271 C606[F801]0F            	mov			byte[cor], branco_intenso
+   270                                  	loop_escreve_str:
+   271 00000276 E80D00                  		call	cursor
+   272 00000279 8A87[0400]              		mov     al, byte[bx+main_str]
+   273 0000027D E81D00                  		call	caracter
+   274 00000280 43                      		inc     bx			;proximo caracter
+   275 00000281 FEC2                    		inc		dl			;avanca a coluna
+   276 00000283 E2F1                    		loop    loop_escreve_str
+   277 00000285 C3                      	ret
+   278                                  
+   279                                  ;***************************************************************************
+   280                                  ;
+   281                                  ;   funcao cursor
+   282                                  ;
+   283                                  ; dh = linha (0-29) e  dl=coluna  (0-79)
+   284                                  cursor:
+   285 00000286 9C                      		pushf
+   286 00000287 50                      		push 		ax
+   287 00000288 53                      		push 		bx
+   288 00000289 51                      		push		cx
+   289 0000028A 52                      		push		dx
+   290 0000028B 56                      		push		si
+   291 0000028C 57                      		push		di
+   292 0000028D 55                      		push		bp
+   293 0000028E B402                    		mov     	ah,2
+   294 00000290 B700                    		mov     	bh,0
+   295 00000292 CD10                    		int     	10h
+   296 00000294 5D                      		pop		bp
+   297 00000295 5F                      		pop		di
+   298 00000296 5E                      		pop		si
+   299 00000297 5A                      		pop		dx
+   300 00000298 59                      		pop		cx
+   301 00000299 5B                      		pop		bx
+   302 0000029A 58                      		pop		ax
+   303 0000029B 9D                      		popf
+   304 0000029C C3                      		ret
+   305                                  ;_____________________________________________________________________________
+   306                                  ;
+   307                                  ;   fun��o caracter escrito na posi��o do cursor
+   308                                  ;
+   309                                  ; al= caracter a ser escrito
+   310                                  ; cor definida na variavel cor
+   311                                  caracter:
+   312 0000029D 9C                      		pushf
+   313 0000029E 50                      		push 		ax
+   314 0000029F 53                      		push 		bx
+   315 000002A0 51                      		push		cx
+   316 000002A1 52                      		push		dx
+   317 000002A2 56                      		push		si
+   318 000002A3 57                      		push		di
+   319 000002A4 55                      		push		bp
+   320 000002A5 B409                        	mov     	ah,9
+   321 000002A7 B700                        	mov     	bh,0
+   322 000002A9 B90100                      	mov     	cx,1
+   323 000002AC 8A1E[F801]                 		mov     	bl,[cor]
+   324 000002B0 CD10                        	int     	10h
+   325 000002B2 5D                      		pop		bp
+   326 000002B3 5F                      		pop		di
+   327 000002B4 5E                      		pop		si
+   328 000002B5 5A                      		pop		dx
+   329 000002B6 59                      		pop		cx
+   330 000002B7 5B                      		pop		bx
+   331 000002B8 58                      		pop		ax
+   332 000002B9 9D                      		popf
+   333 000002BA C3                      		ret
+   334                                  ;_____________________________________________________________________________
+   335                                  
+   336                                  
+   337                                  segment data
+   338                                  	; COFIGURAÇÃO PARA STRING GENERICA
+   339 00000000 0000                    	num_chars		dw		0
+   340 00000002 00                      	linha_str		db		0
+   341 00000003 00                      	coluna_str		db		0
+   342 00000004 00<rept>                	main_str		times 	500		db	0
+   343                                  
+   344                                  	; COFIGURAÇÃO DE CORES
+   345 000001F8 0F                      	cor		db		branco_intenso	;	I R G B COR
+   346                                  	preto			equ		0		;	0 0 0 0 preto
+   347                                  	azul			equ		1		;	0 0 0 1 azul
+   348                                  	verde			equ		2		;	0 0 1 0 verde
+   349                                  	cyan			equ		3		;	0 0 1 1 cyan
+   350                                  	vermelho		equ		4		;	0 1 0 0 vermelho
+   351                                  	magenta			equ		5		;	0 1 0 1 magenta
+   352                                  	marrom			equ		6		;	0 1 1 0 marrom
+   353                                  	branco			equ		7		;	0 1 1 1 branco
+   354                                  	cinza			equ		8		;	1 0 0 0 cinza
+   355                                  	azul_claro		equ		9		;	1 0 0 1 azul claro
+   356                                  	verde_claro		equ		10		;	1 0 1 0 verde claro
+   357                                  	cyan_claro		equ		11		;	1 0 1 1 cyan claro
+   358                                  	rosa			equ		12		;	1 1 0 0 rosa
+   359                                  	magenta_claro	equ		13		;	1 1 0 1 magenta claro
+   360                                  	amarelo			equ		14		;	1 1 1 0 amarelo
+   361                                  	branco_intenso	equ		15		;	1 1 1 1 branco intenso
+   362                                  
+   363                                  	eoi     		EQU 	20h
+   364                                      intr	   		EQU 	08h
+   365 000001F9 00                      	modo_anterior	db		0
+   366 000001FA 00                      	char			db		0
+   367 000001FB 0000                    	offset_dos		dw		0
+   368 000001FD 0000                    	cs_dos			dw		0
+   369 000001FF 00                      	tique			db  	0
+   370 00000200 00                      	segundo			db  	0
+   371 00000201 00                      	minuto 			db  	0
+   372 00000202 00                      	hora 			db  	0
+   373 00000203 486F72613A              	texto_hora    	db  	'Hora:'													; 5 caracteres
+   374 00000208 00003A00003A000020-     	horario			db  	0,0,':',0,0,':',0,0,' ', 13,'$'							; 8 caracteres
+   375 00000211 0D24               
+   376 00000213 544C5F323032322F32-     	aluno_turma    	db  	'TL_2022/2 - Usiel Ferreira Lopes Junior - Turma 06.1' 	; 52 caracteres
+   377 0000021C 202D20557369656C20-
+   378 00000225 466572726569726120-
+   379 0000022E 4C6F706573204A756E-
+   380 00000237 696F72202D20547572-
+   381 00000240 6D612030362E31     
+   382 00000247 4D656E752064652074-     	titulo_menu    	db  	'Menu de teclas:'										; 15 caracteres
+   383 00000250 65636C61733A       
+   384 00000256 783A2073616972          	texto_x    		db  	'x: sair'												; 7 caracteres
+   385 0000025D 733A2070617261206F-     	texto_s    		db  	's: para o contador dos segundos e aguarda novo valor.'	; 53 caracteres
+   386 00000266 20636F6E7461646F72-
+   387 0000026F 20646F732073656775-
+   388 00000278 6E646F732065206167-
+   389 00000281 7561726461206E6F76-
+   390 0000028A 6F2076616C6F722E   
+   391 00000292 6D3A2070617261206F-     	texto_m    		db  	'm: para o contador dos minutos e aguarda novo valor.'	; 52 caracteres
+   392 0000029B 20636F6E7461646F72-
+   393 000002A4 20646F73206D696E75-
+   394 000002AD 746F73206520616775-
+   395 000002B6 61726461206E6F766F-
+   396 000002BF 2076616C6F722E     
+   397 000002C6 683A2070617261206F-     	texto_h    		db  	'h: para o contador das horas e aguarda novo valor.'	; 50 caracteres
+   398 000002CF 20636F6E7461646F72-
+   399 000002D8 2064617320686F7261-
+   400 000002E1 732065206167756172-
+   401 000002EA 6461206E6F766F2076-
+   402 000002F3 616C6F722E         
+   403                                  segment stack stack
+   404 00000000 <res 00000100>              resb 256
+   405                                  stacktop:

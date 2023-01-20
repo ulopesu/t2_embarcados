@@ -5,6 +5,17 @@ segment code
     mov 	ax,stack
     mov 	ss,ax
     mov 	sp,stacktop
+
+	; salvar modo atual de video
+	mov  		ah,0Fh
+	int  		10h
+	mov  		[modo_anterior],al   
+
+	; alterar modo de video para gráfico 640x480 16 cores
+	mov     	al,12h
+	mov     	ah,0
+	int     	10h
+	; preparando relogio
 	XOR 	AX, AX
     MOV 	ES, AX
     MOV     AX, [ES:intr*4];carregou AX com offset anterior
@@ -15,7 +26,7 @@ segment code
     MOV     [ES:intr*4+2], CS
     MOV     WORD [ES:intr*4],relogio
     STI
-	
+
 l1:
 	cmp 	byte [tique], 0
 	jne 	ab
@@ -26,15 +37,18 @@ ab: mov 	ah,0bh
     jne 	fim	
     jmp 	l1
 fim:
+	mov  	AH, 0   					; set video mode
+	mov  	AL, [modo_anterior]   		; modo anterior
+	int  	10h
 	CLI
     XOR     AX, AX
     MOV     ES, AX
     MOV     AX, [cs_dos]
     MOV     [ES:intr*4+2], AX
     MOV     AX, [offset_dos]
-    MOV     [ES:intr*4], AX 
-    MOV     AH, 4Ch
-    int     21h
+    MOV     [ES:intr*4], AX
+	mov     AX, 4C00H
+	int     21h
 
 relogio:
 	push	ax
@@ -95,26 +109,112 @@ converte:
     ADD     AH, 30h
     mov 	byte [horario+1], AH
 
-	; ESCRECVE HORARIO
-	; mov 	ah, 09h
-	; mov 	dx, horario
-	; int 	21h
+	; ESCRECVE HORARIO (00:00:00)
+	mov     	cx,8			;numero de caracteres
+	mov     	bx,0
+	mov     	dh,14			;linha 0-29
+	mov     	dl,35			;coluna 0-79
+	mov			byte[cor], verde
+	l_w_horario:
+		call	cursor
+		mov     al,[bx+horario]
+		call	caracter
+		inc     bx			;proximo caracter
+		inc		dl			;avanca a coluna
+		loop    l_w_horario
 
 	pop     ds
 	pop     ax
 	ret  
 
+;***************************************************************************
+;
+;   funcao cursor
+;
+; dh = linha (0-29) e  dl=coluna  (0-79)
+cursor:
+		pushf
+		push 		ax
+		push 		bx
+		push		cx
+		push		dx
+		push		si
+		push		di
+		push		bp
+		mov     	ah,2
+		mov     	bh,0
+		int     	10h
+		pop		bp
+		pop		di
+		pop		si
+		pop		dx
+		pop		cx
+		pop		bx
+		pop		ax
+		popf
+		ret
+;_____________________________________________________________________________
+;
+;   fun��o caracter escrito na posi��o do cursor
+;
+; al= caracter a ser escrito
+; cor definida na variavel cor
+caracter:
+		pushf
+		push 		ax
+		push 		bx
+		push		cx
+		push		dx
+		push		si
+		push		di
+		push		bp
+    	mov     	ah,9
+    	mov     	bh,0
+    	mov     	cx,1
+   		mov     	bl,[cor]
+    	int     	10h
+		pop		bp
+		pop		di
+		pop		si
+		pop		dx
+		pop		cx
+		pop		bx
+		pop		ax
+		popf
+		ret
+;_____________________________________________________________________________
+
+
 segment data
-	eoi     	EQU 20h
-    intr	   	EQU 08h
-	char		db	0
-	offset_dos	dw	0
-	cs_dos		dw	0
-	tique		db  0
-	segundo		db  0
-	minuto 		db  0
-	hora 		db  0
-	horario		db  0,0,':',0,0,':',0,0,' ', 13,'$'
+	cor		db		branco_intenso	;	I R G B COR
+	preto			equ		0		;	0 0 0 0 preto
+	azul			equ		1		;	0 0 0 1 azul
+	verde			equ		2		;	0 0 1 0 verde
+	cyan			equ		3		;	0 0 1 1 cyan
+	vermelho		equ		4		;	0 1 0 0 vermelho
+	magenta			equ		5		;	0 1 0 1 magenta
+	marrom			equ		6		;	0 1 1 0 marrom
+	branco			equ		7		;	0 1 1 1 branco
+	cinza			equ		8		;	1 0 0 0 cinza
+	azul_claro		equ		9		;	1 0 0 1 azul claro
+	verde_claro		equ		10		;	1 0 1 0 verde claro
+	cyan_claro		equ		11		;	1 0 1 1 cyan claro
+	rosa			equ		12		;	1 1 0 0 rosa
+	magenta_claro	equ		13		;	1 1 0 1 magenta claro
+	amarelo			equ		14		;	1 1 1 0 amarelo
+	branco_intenso	equ		15		;	1 1 1 1 branco intenso
+
+	eoi     		EQU 	20h
+    intr	   		EQU 	08h
+	modo_anterior	db		0
+	char			db		0
+	offset_dos		dw		0
+	cs_dos			dw		0
+	tique			db  	0
+	segundo			db  	0
+	minuto 			db  	0
+	hora 			db  	0
+	horario			db  	0,0,':',0,0,':',0,0,' ', 13,'$'
 segment stack stack
     resb 256
 stacktop:

@@ -31,11 +31,33 @@ l1:
 	cmp 	byte [tique], 0
 	jne 	ab
 	call 	converte
-ab: mov 	ah,0bh		
+
+ab: 
+	mov 	ah,0bh		
     int 	21h			; Le buffer de teclado
     cmp 	al,0
-    jne 	fim	
-    jmp 	l1
+	je		l1			; nenhuma telha -> loop principal
+	mov 	ah, 08
+	int 	21h
+	cmp		al, 'x'		; tecla x -> finaliza o programa
+	je      fim
+	cmp		al, 's'		; tecla s -> configura os segundos
+	je      config_seg
+	cmp		al, 'm'		; tecla m -> configura os minutos
+	je      config_min
+	cmp		al, 'h'		; tecla h -> configura as horas
+	je      config_hrs
+	jmp 	l1			; outras teclas -> loop principal
+
+config_seg:
+	jmp fim
+
+config_min:
+	jmp fim
+
+config_hrs:
+	jmp fim
+
 fim:
 	mov  	AH, 0   					; set video mode
 	mov  	AL, [modo_anterior]   		; modo anterior
